@@ -1,76 +1,35 @@
 package com.pluralsight.controller;
 
 import com.pluralsight.model.Transaction;
-import com.pluralsight.service.TransactionService;
-import org.springframework.web.bind.annotation.*;
+import com.pluralsight.repository.TransactionDao;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 
-import java.math.BigDecimal;
 import java.util.List;
 
-@RestController
-@RequestMapping("/api/transactions")
+@Controller
 public class TransactionController {
 
-    private final TransactionService service;
+    private final TransactionDao transactionDao;
 
-    public TransactionController(TransactionService service) {
-        this.service = service;
+    public TransactionController(TransactionDao transactionDao) {
+        this.transactionDao = transactionDao;
     }
 
-    @PostMapping("/deposit")
-    public String addDeposit(@RequestParam String vendor,
-                             @RequestParam String description,
-                             @RequestParam BigDecimal amount) {
-        service.addDeposit(vendor, description, amount);
-        return "Deposit successfully added.";
+    // Show all transactions
+    @GetMapping("/transactions")
+    public String listTransactions(Model model) {
+        model.addAttribute("transactions", transactionDao.findAll());
+        return "transactions"; // Thymeleaf template
     }
 
-    @PostMapping("/payment")
-    public String makePayment(@RequestParam String vendor,
-                              @RequestParam String description,
-                              @RequestParam BigDecimal amount) {
-        service.makePayment(vendor, description, amount);
-        return "Payment successfully added.";
-    }
-
-    @GetMapping("/all")
-    public List<Transaction> getAllTransactions() {
-        return service.getAllTransactions();
-    }
-
-    @GetMapping("/deposits")
-    public List<Transaction> getDeposits() {
-        return service.getDeposits();
-    }
-
-    @GetMapping("/payments")
-    public List<Transaction> getPayments() {
-        return service.getPayments();
-    }
-
-    @GetMapping("/month-to-date")
-    public List<Transaction> getMonthToDate() {
-        return service.getMonthToDate();
-    }
-
-    @GetMapping("/previous-month")
-    public List<Transaction> getPreviousMonth() {
-        return service.getPreviousMonth();
-    }
-
-    @GetMapping("/year-to-date")
-    public List<Transaction> getYearToDate() {
-        return service.getYearToDate();
-    }
-
-    @GetMapping("/previous-year")
-    public List<Transaction> getPreviousYear() {
-        return service.getPreviousYear();
-    }
-
-    @GetMapping("/search")
-    public List<Transaction> searchByVendor(@RequestParam String vendor) {
-        return service.searchByVendor(vendor);
+    // Search by vendor
+    @GetMapping("/transactions/search")
+    public String searchByVendor(@RequestParam("vendor") String vendor, Model model) {
+        List<Transaction> results = transactionDao.findByVendor(vendor);
+        model.addAttribute("transactions", results);
+        return "transactions"; // reuse same table view
     }
 }
-
