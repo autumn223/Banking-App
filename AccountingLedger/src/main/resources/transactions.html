@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Accounting Ledger</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    h1 { color: #333; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    table, th, td { border: 1px solid #ccc; }
+    th, td { padding: 10px; text-align: left; }
+    th { background-color: #f2f2f2; }
+    form { margin-top: 20px; }
+    label { display: block; margin: 5px 0 2px; }
+    input, button { padding: 5px; margin-bottom: 10px; }
+    .filter-buttons button { margin-right: 10px; }
+  </style>
+</head>
+<body>
+<h1>Accounting Ledger</h1>
+
+<div class="filter-buttons">
+  <button onclick="loadAll()">All Transactions</button>
+  <button onclick="loadDeposits()">Deposits</button>
+  <button onclick="loadPayments()">Payments</button>
+</div>
+
+<div>
+  <label for="vendorSearch">Search by Vendor:</label>
+  <input type="text" id="vendorSearch" placeholder="Vendor name">
+  <button onclick="searchVendor()">Search</button>
+</div>
+
+<table id="transactionsTable">
+  <thead>
+  <tr>
+    <th>ID</th>
+    <th>Date</th>
+    <th>Time</th>
+    <th>Description</th>
+    <th>Vendor</th>
+    <th>Amount</th>
+  </tr>
+  </thead>
+  <tbody></tbody>
+</table>
+
+<form id="depositForm" onsubmit="addDeposit(event)">
+  <h2>Add Deposit</h2>
+  <label>Vendor:</label>
+  <input type="text" id="depositVendor" required>
+  <label>Description:</label>
+  <input type="text" id="depositDescription" required>
+  <label>Amount:</label>
+  <input type="number" id="depositAmount" step="0.01" required>
+  <button type="submit">Add Deposit</button>
+</form>
+
+<form id="paymentForm" onsubmit="addPayment(event)">
+  <h2>Add Payment</h2>
+  <label>Vendor:</label>
+  <input type="text" id="paymentVendor" required>
+  <label>Description:</label>
+  <input type="text" id="paymentDescription" required>
+  <label>Amount:</label>
+  <input type="number" id="paymentAmount" step="0.01" required>
+  <button type="submit">Add Payment</button>
+</form>
+
+<script>
+  const API_BASE = "http://localhost:8080/api/transactions";
+
+  function renderTransactions(transactions) {
+      const tbody = document.querySelector("#transactionsTable tbody");
+      tbody.innerHTML = "";
+      if (!transactions || transactions.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="6">No transactions found</td></tr>`;
+          return;
+      }
+      transactions.forEach(t => {
+          const row = document.createElement("tr");
+          row.innerHTML = `
+              <td>${t.id}</td>
+              <td>${t.transactionDate || t.date || ''}</td>
+              <td>${t.transactionTime || t.time || ''}</td>
+              <td>${t.description}</td>
+              <td>${t.vendor}</td>
+              <td>${t.amount}</td>
+          `;
+          tbody.appendChild(row);
+      });
+  }
+
+  async function fetchData(url) {
+      try {
+          const res = await fetch(url);
+          if (!res.ok) throw new Error(`HTTP error! Status: ${res.status}`);
+          const data = await res.json();
+          console.log("Fetched data:", data);
+          renderTransactions(data);
+      } catch (err) {
+          console.error("Error fetching transactions:", err);
+          alert("Failed to load transactions. Check console for details.");
+      }
+  }
+
+  function loadAll() { fetchData(`${API_BASE}/all`); }
+  function loadDeposits() { fetchData(`${API_BASE}/deposits`); }
+  function loadPayments() { fetchData(`${API_BASE}/payments`); }
+
+  function searchVendor() {
+      const vendor = document.getElementById("vendorSearch").value;
+      if (!vendor) return alert("Enter a vendor to search.");
+      fetchData(`${API_BASE}/search?vendor=${encodeURIComponent(vendor)}`);
+  }
+
+  async function addDeposit(event) {
+      event.preventDefault();
+      const vendor = document.getElementById("depositVendor").value;
+      const description = document.getElementById("depositDescription").value;
+      const amount = parseFloat(document.getElementById("depositAmount").value);
+      try {
+          await fetch(`${API_BASE}/deposit?vendor=${encodeURIComponent(vendor)}&description=${encodeURIComponent(description)}&amount=${amount}`, { method: "POST" });
+          document.getElementById("depositForm").reset();
+          loadAll();
+      } catch (err) {
+          console.error("Error adding deposit:", err);
+          alert("Failed to add deposit. Check console.");
+      }
+  }
+
+  async function addPayment(event) {
+      event.preventDefault();
+      const vendor = document.getElementById("paymentVendor").value;
+      const description = document.getElementById("paymentDescription").value;
+      const amount = parseFloat(document.getElementById("paymentAmount").value);
+      try {
+          await fetch(`${API_BASE}/payment?vendor=${encodeURIComponent(vendor)}&description=${encodeURIComponent(description)}&amount=${amount}`, { method: "POST" });
+          document.getElementById("paymentForm").reset();
+          loadAll();
+      } catch (err) {
+          console.error("Error adding payment:", err);
+          alert("Failed to add payment. Check console.");
+      }
+  }
+
+  // Ensure page fully loads first
+  window.onload = loadAll;
+</script>
+</body>
+</html>
